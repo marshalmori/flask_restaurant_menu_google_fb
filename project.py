@@ -44,8 +44,7 @@ def fbconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
     access_token = request.data
-    print "access token received %s " % access_token
-
+    print("access token received %s " % access_token)
 
     app_id = json.loads(open('fb_client_secrets.json', 'r').read())[
         'web']['app_id']
@@ -66,18 +65,20 @@ def fbconnect():
         and replace the remaining quotes with nothing so that it can be used directly in the graph
         api calls
     '''
-    token = result.split(',')[0].split(':')[1].replace('"', '')
-
+    token = result.decode().split(',')[0].split(':')[1].replace('"', '')
+    print(token)
     url = 'https://graph.facebook.com/v2.8/me?access_token=%s&fields=name,id,email' % token
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
-    # print "url sent for API access:%s"% url
-    # print "API JSON result: %s" % result
+    print("url sent for API access:%s"% url)
+    print ("API JSON result: %s" % result)
     data = json.loads(result)
+
     login_session['provider'] = 'facebook'
-    login_session['username'] = data["name"]
-    login_session['email'] = data["email"]
-    login_session['facebook_id'] = data["id"]
+    # login_session['username'] = data["name"]
+    login_session['username'] = 'name'
+    login_session['email'] = 'email'
+    login_session['facebook_id'] = 'id'
 
     # The token must be stored in the login_session in order to properly logout
     login_session['access_token'] = token
@@ -88,7 +89,7 @@ def fbconnect():
     result = h.request(url, 'GET')[1]
     data = json.loads(result)
 
-    login_session['picture'] = data["data"]["url"]
+    login_session['picture'] = url
 
     # see if user exists
     user_id = getUserID(login_session['email'])
@@ -417,6 +418,30 @@ def getUserID(email):
         return user.id
     except:
         return None
+
+
+# Disconnect based on provider
+@app.route('/disconnect')
+def disconnect():
+    if 'provider' in login_session:
+        if login_session['provider'] == 'google':
+            gdisconnect()
+            del login_session['gplus_id']
+            del login_session['access_token']
+        if login_session['provider'] == 'facebook':
+            fbdisconnect()
+            del login_session['facebook_id']
+        del login_session['username']
+        del login_session['email']
+        del login_session['picture']
+        del login_session['user_id']
+        del login_session['provider']
+        flash("You have successfully been logged out.")
+        return redirect(url_for('showRestaurants'))
+    else:
+        flash("You were not logged in")
+        return redirect(url_for('showRestaurants'))
+
 
 if __name__ == '__main__':
   app.secret_key = 'super_secret_key'
